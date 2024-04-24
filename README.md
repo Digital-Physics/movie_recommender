@@ -7,3 +7,4 @@ The original notebook can be found here:
 https://github.com/topspinj/tmls-2020-recommender-workshop
 
 This notebook has some additional notes, modifications, and code I added as I went through.
+There was also some supplemental ratings that were added to the ratings file.
