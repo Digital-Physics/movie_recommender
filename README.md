@@ -6,4 +6,4 @@ The original notebook can be found here:
 
 https://github.com/topspinj/tmls-2020-recommender-workshop
 
-This notebook has some additional notes and cells I added as I went through.
+This notebook has some additional notes, modifications, and code I added as I went through.
