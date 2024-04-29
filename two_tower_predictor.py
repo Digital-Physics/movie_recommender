@@ -1,3 +1,5 @@
+from torch import nn
+
 class TwoTowerModel(nn.Module):
     def __init__(self, item_embedding_size, user_embedding_size, context_feature_size):
         super(TwoTowerModel, self).__init__()
