@@ -1,5 +1,5 @@
 import time
-from functools import wraps
+# from functools import wraps
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -7,16 +7,19 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.neighbors import NearestNeighbors
 import faiss
 
-# Here's a brief overview of how Faiss works and why it can be faster than traditional k-nearest neighbors (KNN) algorithms:
+# Here's a brief overview of how Facebook AI Similarity Search (FAISS) works and why it can be faster than traditional k-nearest neighbors (KNN) algorithms:
 # Indexing: Faiss uses advanced indexing techniques to organize the vectors in a way that makes similarity search faster. One of the key techniques is the use of hierarchical data structures like the inverted file or the IVFADC (Inverted File with Approximate Distance Calculation). These structures allow Faiss to quickly narrow down the search space to a subset of vectors that are likely to be similar to the query vector.
 # Quantization: Faiss can quantize (or compress) the vectors into a lower-dimensional space, which reduces the memory footprint and speeds up the distance computations. This is particularly useful for high-dimensional vectors where the distance calculations can be computationally expensive.
 # GPU Acceleration: Faiss provides GPU-accelerated implementations of the indexing and search algorithms, which can significantly speed up the search process, especially for large datasets and high-dimensional vectors.
 # Efficient Distance Computations: Faiss uses optimized algorithms for computing distances between vectors, such as the inner product (for cosine similarity) or L2 distance. These algorithms are carefully optimized to take advantage of modern CPU and GPU architectures.
 # we are using faiss-cpu, so will we see a speed-up?
+# we are only using ~10k vectors. Is that big enough to see speed-up?
+# we are only using an embedding dimension of 20. Is that big enough to see speed-up?
 
 # Load the MovieLens dataset
 ratings = pd.read_csv('../data/ratings.csv')
 movies = pd.read_csv('../data/movies.csv')
+# to do: make more fake data to compare KNN and FAISS when the number of movies/items is 100_000_000_000
 
 # Create a sparse utility matrix
 user_mapper = {val: i for i, val in enumerate(np.unique(ratings["userId"]))}
@@ -34,11 +37,12 @@ Q = svd.fit_transform(X.T)
 print("Shape of Q, our movie embeddings:", Q.shape)
 
 # Index the item embeddings using Faiss
-index = faiss.IndexFlatL2(20)  # L2 distance with 20 dimensions
+index = faiss.IndexFlatL2(20)  # L2 (Euclidean) distance with 20 dimensions
 index.add(Q)
 
 # Example query. Toy Story is movieId == 1 which gets mapped to index 0
 query_embedding = svd.transform(X.T[movie_mapper[1]].reshape(1, -1))[0]
+# query_embedding = svd.transform(X.T[movie_mapper[39]].reshape(1, -1))[0]
 # D = distance, I = index
 D, I = index.search(np.array([query_embedding]), k=10)
 # even though the embeddings are in a 20-dimensional space, the result of the nearest neighbor search (D and I) does not directly reflect this; 
@@ -63,7 +67,7 @@ print(f"{query_point.shape=}")
 
 # Timer decorator
 def timer(func):
-    @wraps(func)
+    # @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
