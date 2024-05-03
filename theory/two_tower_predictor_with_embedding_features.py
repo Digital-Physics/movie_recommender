@@ -3,7 +3,7 @@ from torch import nn
 
 
 class TwoTowerModel(nn.Module):
-    def __init__(self, item_feature_size, static_user_feature_size, context_feature_size):
+    def __init__(self, item_embedding_size, user_embedding_size, context_feature_size):
         """"this two tower model imports embeddings, but we may not have item embeddings (or user embeddings) from a collaborative filtering kind of process if new items don't have an embedding yet.
         also, we are assuming the output is a binary classifier (click/no-click) but we could have a regression model with a score (click = 1, comment = 2, like = 3, score = 4)."""
         # super() is used to call the constructor of the parent class of TwoTowerModel, which is nn.Module. 
@@ -12,39 +12,35 @@ class TwoTowerModel(nn.Module):
         # However, to properly initialize the parent class's attributes and set up its internal state, you need to explicitly call the parent class's constructor
         super(TwoTowerModel, self).__init__()
         self.item_tower = nn.Sequential(
-            nn.Linear(item_feature_size, 128),
+            nn.Linear(item_embedding_size, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU()
         )
         self.user_tower = nn.Sequential(
-            nn.Linear(static_user_feature_size + context_feature_size, 128),
+            nn.Linear(user_embedding_size + context_feature_size, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU()
         )
     
-    def forward(self, item_features, user_features, context_features):
-        item_output = self.item_tower(item_features)
-        user_output = self.user_tower(torch.cat((user_features, context_features), dim=1))
+    def forward(self, item_embedding, user_embedding, context_features):
+        item_output = self.item_tower(item_embedding)
+        user_output = self.user_tower(torch.cat((user_embedding, context_features), dim=1))
         dot_product = torch.sum(item_output * user_output, dim=1, keepdim=True)
         return torch.sigmoid(dot_product)
 
 # Example usage
-# separate ones for user search history and item text
-bag_of_words_embedding_length = 32 # reduced using PCA or t-SNE 
-last_item_click = 64
-
-item_feature_size = len(["post_age", "likes_per_hour", "user_id"]) + bag_of_words_embedding_length
-user_feature_size = len(["user_age", "geo_location", "logins_per_week"]) 
-context_feature_size = last_item_click + bag_of_words_embedding_length
-model = TwoTowerModel(item_feature_size, user_feature_size, context_feature_size)
+item_embedding_size = 20 # this is our item embedding feature input size, not our final item embedding size of 64
+user_embedding_size = 20 # this is our user embedding feature input size, not our final user embedding size of 64
+context_feature_size = 5
+model = TwoTowerModel(item_embedding_size, user_embedding_size, context_feature_size)
 
 # Example inputs
-item_features = torch.randn(1, item_feature_size)
-user_features = torch.randn(1, user_feature_size)
+item_embedding = torch.randn(1, item_embedding_size)
+user_embedding = torch.randn(1, user_embedding_size)
 context_features = torch.randn(1, context_feature_size)
 
 # Forward pass
-output = model(item_features, user_features, context_features)
+output = model(item_embedding, user_embedding, context_features)
 print(output)
