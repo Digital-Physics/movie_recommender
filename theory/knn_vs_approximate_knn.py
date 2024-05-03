@@ -7,6 +7,7 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.neighbors import NearestNeighbors
 import faiss
 
+# FAISS: https://towardsdatascience.com/make-knn-300-times-faster-than-scikit-learns-in-20-lines-5e29d74e76bb
 # Here's a brief overview of how Facebook AI Similarity Search (FAISS) works and why it can be faster than traditional k-nearest neighbors (KNN) algorithms:
 # Indexing: Faiss uses advanced indexing techniques to organize the vectors in a way that makes similarity search faster. One of the key techniques is the use of hierarchical data structures like the inverted file or the IVFADC (Inverted File with Approximate Distance Calculation). These structures allow Faiss to quickly narrow down the search space to a subset of vectors that are likely to be similar to the query vector.
 # Quantization: Faiss can quantize (or compress) the vectors into a lower-dimensional space, which reduces the memory footprint and speeds up the distance computations. This is particularly useful for high-dimensional vectors where the distance calculations can be computationally expensive.
