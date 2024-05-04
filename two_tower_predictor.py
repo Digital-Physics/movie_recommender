@@ -31,10 +31,14 @@ class TwoTowerModel(nn.Module):
         return torch.sigmoid(dot_product)
 
 # Example usage
-# separate ones for user search history and item text
-bag_of_words_embedding_length = 32 # reduced using PCA or t-SNE 
+# we have two separate Bag of Words for user search history and item text
+# should we use a more sophisticated embedding for text?
+bag_of_words_embedding_length = 32 # reduced from vocab length to 32 using PCA or t-SNE 
 last_item_click = 64
 
+# to do: think of more/better features. 
+# to do: consider whether we need item context features for the item... so both the item and user are a rep of their entire history and their their relevance to now/recent vs the past
+# to do: change this code into df.columns once we have some fake data
 item_feature_size = len(["post_age", "likes_per_hour", "user_id"]) + bag_of_words_embedding_length
 user_feature_size = len(["user_age", "geo_location", "logins_per_week"]) 
 context_feature_size = last_item_click + bag_of_words_embedding_length

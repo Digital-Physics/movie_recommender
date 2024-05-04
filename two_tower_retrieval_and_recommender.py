@@ -1,6 +1,7 @@
 from torch import nn
 import pandas as pd
 import faiss
+from two_tower_predictor import TwoTowerModel
 
 ###### Offline training
 # Step 1a: parse & clean data

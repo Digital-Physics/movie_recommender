@@ -108,3 +108,6 @@ for neighbor_idx, dist in zip(nearest_neighbors_indices, nearest_neighbors_dista
     print(f"Movie ID: {neighbor_idx}, Movie: {movie_titles[neighbor_idx]}, Distance: {dist}")
 
 # To do: Let's explore Alternating Least Squares as well.
+# ALS is an iterative optimization algorithm that can be used for matrix factorization, 
+# particularly in collaborative filtering for recommendation systems. It alternates between 
+# fixing one factor matrix and optimizing the other, which can be computationally intensive for large matrices, just as SGD above proved to be.
