@@ -1,7 +1,69 @@
 import torch
-from torch import nn
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import pandas as pd
+from scipy.sparse import csr_matrix
+# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 
+###### Offline training
+# Step 1a: parse, clean & transform logged data (or Load & transform in our case)
+ratings = pd.read_csv('./data/ratings.csv')
+movies = pd.read_csv('./data/movies.csv')
 
+# list of (key=movieId, value=title) tuples for lookup later
+movie_titles = dict(zip(movies['movieId'], movies['title']))
+
+# Create a sparse utility/interaction matrix. 
+# map user and movie Ids to consecutive index numbers staring with 0
+user_mapper = {val: i for i, val in enumerate(np.unique(ratings["userId"]))}
+movie_mapper = {val: i for i, val in enumerate(np.unique(ratings["movieId"]))}
+movie_inv_mapper = {i: val for i, val in enumerate(np.unique(ratings["movieId"]))}
+
+# create the lists that will correspond to the list of ratings (or in this case the "engagement") in our user-item engagement matrix
+user_index = [user_mapper[i] for i in ratings['userId']] # rows, user i
+item_index = [movie_mapper[j] for j in ratings['movieId']] # cols, user j
+engagement = [1 if rating >= 3.5 else 0 for rating in ratings["rating"]] # to mix it up, let's pretend the ratings are really engagement/no-engagement binary data
+
+# y values, y indices (i, j) , shape of matrix
+# y = csr_matrix((engagement, (user_index, item_index)), shape=(len(user_mapper), len(movie_mapper)))
+# y = torch.tensor(y.toarray(), dtype=torch.float32)
+# print("engagement matrix dimensions:", len(user_mapper), len(movie_mapper), y.shape)
+print("Length of list of training example entries (i, j) in the sparse matrix:", len(engagement))
+y = torch.tensor(engagement)
+
+# We should have a good mix of both positive and negative examples engagement examples. let's print the distribution
+print(f"positive examples: {sum(engagement)}")
+print(f"negative examples: {len(engagement) - sum(engagement)}")
+
+# Create fake user and item features:
+# note: if we do any normalization, (technically) we should make sure we aren't having any minor data leaks from the test set (e.g. divide by average which includes test data) 
+# to do: think of more/better features. 
+# to do: consider whether we need item context features for the item... so both the item and user are a rep of their entire history and their their relevance to now/recent vs the past
+# we have two separate Bag of Words for user search history and item text. both are the same length; should we use a more sophisticated embedding for text?
+bag_of_words_embedding_length = 32 # reduced from vocab length to 32 using PCA or t-SNE or some other method
+last_item_click = 64 # same as the embedding size at the top of our towers
+item_feature_size = len(["post_age", "likes_per_hour", "user_id"]) + bag_of_words_embedding_length
+user_feature_size = len(["user_age", "geo_location", "logins_per_week"]) 
+context_feature_size = last_item_click + bag_of_words_embedding_length
+
+# Fake training data
+X_and_y = {
+    "item_features": torch.randn(len(y), item_feature_size),
+    "user_features": torch.randn(len(y), user_feature_size),
+    "context_features": torch.randn(len(y), context_feature_size),
+    "engagement": y
+}
+
+# Step 1b: feature engineering (already done)
+
+# Step 1c: train and validation split 
+# Skip here; we'll use kf.split() to get the indices in our for loop and then get our training and cv there
+# Note: we won't have a 3rd test_set because we'll do K-Folds cross validation and use the CV metrics after the K-th round for the final evaluation)
+# X_and_y_train, X_and_y_cv = train_test_split(*X_and_y.values(), test_size=0.2, random_state=42)
+
+# Step 2: Model Architecture
 class TwoTowerModel(nn.Module):
     def __init__(self, item_feature_size, static_user_feature_size, context_feature_size):
         """"this two tower model imports embeddings, but we may not have item embeddings (or user embeddings) from a collaborative filtering kind of process if new items don't have an embedding yet.
@@ -30,25 +92,58 @@ class TwoTowerModel(nn.Module):
         dot_product = torch.sum(item_output * user_output, dim=1, keepdim=True)
         return torch.sigmoid(dot_product)
 
-# Example usage
-# we have two separate Bag of Words for user search history and item text
-# should we use a more sophisticated embedding for text?
-bag_of_words_embedding_length = 32 # reduced from vocab length to 32 using PCA or t-SNE 
-last_item_click = 64
+# Step 3a: train a two tower ReLu Neural Net with a dot product at the last layer (followed by a sigmoid; Ground truth is 0 or 1).
+# Note: we may also want to explore boosting architectures such as XGBoost, CatBoost, or LGBM after our Neural Net approach. 
 
-# to do: think of more/better features. 
-# to do: consider whether we need item context features for the item... so both the item and user are a rep of their entire history and their their relevance to now/recent vs the past
-# to do: change this code into df.columns once we have some fake data
-item_feature_size = len(["post_age", "likes_per_hour", "user_id"]) + bag_of_words_embedding_length
-user_feature_size = len(["user_age", "geo_location", "logins_per_week"]) 
-context_feature_size = last_item_click + bag_of_words_embedding_length
+# Hyperparameters
+num_epochs = 50
+learning_rate = 0.01
+k_folds = 10  
+
+kf = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+
+# Initialize Model and select optimizer
 model = TwoTowerModel(item_feature_size, user_feature_size, context_feature_size)
+optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+# optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-# Example inputs
-item_features = torch.randn(1, item_feature_size)
-user_features = torch.randn(1, user_feature_size)
-context_features = torch.randn(1, context_feature_size)
+for fold, (train_index, cv_index) in enumerate(kf.split(X_and_y["engagement"])):
+    X_and_y_train = {
+        "item_features": X_and_y["item_features"][train_index],
+        "user_features": X_and_y["user_features"][train_index],
+        "context_features": X_and_y["context_features"][train_index],
+        "engagement": X_and_y["engagement"][train_index]
+    }
 
-# Forward pass
-output = model(item_features, user_features, context_features)
-print(output)
+    X_and_y_cv = {
+        "item_features": X_and_y["item_features"][cv_index],
+        "user_features": X_and_y["user_features"][cv_index],
+        "context_features": X_and_y["context_features"][cv_index],
+        "engagement": X_and_y["engagement"][cv_index]
+    }
+
+    # Training loop
+    for epoch in range(num_epochs):
+        optimizer.zero_grad() # we'll calc the gradient for each param/weight again
+        print(X_and_y_train["engagement"].shape)
+        print(X_and_y_train["item_features"].shape, X_and_y_train["user_features"].shape, X_and_y_train["context_features"].shape)
+        predictions = model(X_and_y_train["item_features"], X_and_y_train["user_features"], X_and_y_train["context_features"])
+        ground_truth = X_and_y_train["engagement"]
+        loss = nn.BCELoss()(predictions.view(-1),  ground_truth.view(-1).float())
+        loss.backward()
+        optimizer.step()
+
+        # Compute loss on the cross-validation set
+        with torch.no_grad():
+            predictions_cv = model(X_and_y_cv["item_features"], X_and_y_cv["user_features"], X_and_y_cv["context_features"])
+            ground_truth = X_and_y_cv["engagement"]
+            loss_cv = nn.BCELoss()(predictions_cv.view(-1), ground_truth.view(-1).float())
+
+        print(f"Fold {fold+1}/{k_folds}, Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}, CV Loss: {loss_cv.item()}")
+
+# Step 3b: Evaluate the model
+# Normally, we'd want to look at some metrics like AUC, but we're using fake data here
+# Note the imbalance in the dataset for this kind of analysis; you can always predict the majority class and be right that percentage of the time.
+
+# Save the trained model
+torch.save(model.state_dict(), "./trained_model/two_tower_model.pth")
