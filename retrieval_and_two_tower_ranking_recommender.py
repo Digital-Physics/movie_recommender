@@ -6,9 +6,11 @@ import faiss
 
 ###### Serving in Production
 # should we even import a model with the item embedding tower? if they change, yes. if not, no.
-# the user and item embeddings exist in the same space 🧐
+# in some sense, the user and item embeddings exist in the same space 🧐
+# obviously they are the same dim since they are dotted together. and dot is like cosine similarity, but with scale that can go beyond [-1, 1]
 # we can do retrieval on whatever the user embedding is coming out of it's tower
 # https://cloud.google.com/blog/products/ai-machine-learning/scaling-deep-retrieval-tensorflow-two-towers-architecture
+
 # Step 4: Evaluate the performance with A/B tests. Use the new model on a subset of users before evaluating whether it should replace our current default model in Production.
 
 # Step 4a: FAISS retrieval to find the approximate 250 closest vector candidates (we only have ~10k movies, but let's pretend there were billions). These might be stored in a vector DB.

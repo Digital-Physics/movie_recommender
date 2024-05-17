@@ -47,9 +47,14 @@ print(f"negative examples: {len(engagement) - sum(engagement)}")
 bag_of_words_embedding_length = 32 # reduced from vocab length to 32 using PCA or t-SNE or some other method
 last_item_click = 64 # same as the embedding size at the top of our towers
 # notice how our item embeddings will change over time. do we want to update these embeddings in FAISS at deployment time?
-item_feature_size = len(["post_age", "likes_per_hour", "user_id"]) + bag_of_words_embedding_length
-user_feature_size = len(["user_age", "geo_location", "logins_per_week"]) 
+item_feature_size = len(["post_age", "likes_per_hour", "tagged_people", "visual_items"]) + bag_of_words_embedding_length
+user_feature_size = len(["user_age", "geo_location", "logins_per_week", "device"])  
 context_feature_size = last_item_click + bag_of_words_embedding_length
+# Note: we can have several models, so not every feature needs to be crammed in here. e.g. 
+# Model w/ retrieval from friends content over past month
+# Model w/ retrieval based on popular content that is trending within the past week
+# Model w/ retrieval based on content that is based on genres or categories of interest
+# You may have 3 FAISS databases
 
 # Fake training data. 
 # technically, better fake data would use the same random item features for the same user i or movie j each time in training
