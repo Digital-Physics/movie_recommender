@@ -15,9 +15,11 @@ precision = len(relevant_retrieved) / len(retrieved_documents) if len(retrieved_
 relevant_retrieved = [doc for doc in relevant_documents if doc in retrieved_documents]
 recall = len(relevant_retrieved) / len(relevant_documents) if len(relevant_documents) > 0 else 0
 
-print("Precision:", precision)
-print("One of two documents that were retrieved were actually relevant. (TP/(TP + FP))")
-print()
 print("Recall:", recall)
+print("The retrieval team tends to be interested in Recall.")
 print("Only one of the three relevant documents were retrieved. (TP/(TP + FN))")
 print("How do we identify FN in recommender systems?")
+print()
+print("Precision:", precision)
+print("The ranking team tends to be interested in Precision and related metrics (Mean Average Precision, Precision @ K, etc.)")
+print("One of two documents that were retrieved were actually relevant. (TP/(TP + FP))")
